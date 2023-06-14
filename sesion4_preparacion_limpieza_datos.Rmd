@@ -314,3 +314,5 @@ Si la temperatura es mayor o igual que 37, diga "Si", pero si la temperatura es 
 
 6. Revise el conjunto de datos e implemente otras estrategias de limpieza y preparación
 de datos que le parezcan relevantes para este conjunto de datos.
+
+123
