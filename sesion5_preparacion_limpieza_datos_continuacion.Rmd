@@ -213,6 +213,7 @@ datos_hospital_4 <- datos_hospital_4 |>
          "vomito" = "vomit")
 ```
 
+1
 
 b. Eliminar columnas que no proveen información relevante (merged_header y 20..., también
 elimine la columna fever).
