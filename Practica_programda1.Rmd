@@ -158,11 +158,15 @@ datos_netflix_agrupadosdirectorshow <- datos_netflix_2 |>
   arrange(desc(n))
 ```
 
+Lista de películas agregadas en marzo 2020 (Pandemia)
+
+
 ```{r}
-datos_netflix2020 <- datos_netflix_2
-  filter(Anyo == 2020)
+datos_netflix2020 <- datos_netflix_2 |> 
+  filter(Mes_Agregado == 3 & Anyo_Agregado == 2020)
 ```
 
+Se añadieron en total 137 peliculas y TVshows en total para marzo 2020.
 
 
 
