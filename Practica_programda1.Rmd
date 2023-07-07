@@ -1,0 +1,172 @@
+---
+title: "Práctica programada 1"
+author: "Juliana Cruz Gonzales"
+date: "2023-06-10"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(readr)
+library(readxl)
+library(tidyr)# doma de datos
+library(janitor) #limpieza de datos
+library(lubridate)
+library(hms)
+library(stringr)
+```
+
+1. Carga de datos
+
+```{r}
+datos_netflix <- read_csv2("https://raw.githubusercontent.com/isa229/programacion_analisis_datos_ii/main/netflix_info.csv")
+```
+2. Ajuste de nombres de las columnas 
+
+```{r}
+datos_netflix <- datos_netflix|> 
+ rename( tipo = type,
+ titulo = title,  
+ pais = country,
+ fecha_agregadado = date_added,
+ fecha_lanxamientio = release_year,
+ clasificacion  =  rating,   
+ duracion = duration,
+ incluido_en = listed_in
+  )
+```
+
+```{r}
+datos_netflix <- datos_netflix|>
+   rename(fecha_lanzamiento =  fecha_lanxamientio,
+          categoria = incluido_en)
+  
+```
+
+
+
+Eliminación de filas duplicadas
+
+```{r}
+filas_duplicadas_net <- datos_netflix |> 
+  janitor::get_dupes()
+```
+```{r}
+datos_netflix_sinfilasdupes <- datos_netflix |> 
+  distinct()
+```
+
+Eliminación de columnas y filas vacías: 
+```{r}
+datos_netflix_sin_vacios <- datos_netflix_sinfilasdupes |> 
+  remove_empty(which = c("rows", "cols")) 
+```
+
+Eliminación de variable "released_year" -> "fecha_lanzamiento"
+
+```{r}
+datos_netflix_sinfechalanz <- datos_netflix_sin_vacios |> 
+  select(-fecha_lanzamiento)
+```
+
+Limpieza de variable tipo y país
+
+```{r}
+datos_netflix_sinfechalanz <- datos_netflix_sinfechalanz |> 
+  rename_with(~str_to_title(.))
+
+```
+
+```{r}
+datos_netflix_sinfechalanz <- datos_netflix_sinfechalanz |> 
+  mutate_all(~str_to_title(.))
+```
+
+Sustitución de NA's de valores tipo caracter
+
+```{r}
+
+datos_netflix_sinna <- datos_netflix_sinfechalanz |> 
+  mutate_if(is.character, ~ifelse(is.na(.), "Sin información", .))
+
+```
+
+
+Creación de columnas de año y mes en que los items fueron agregados a la plataforma de streaming Netflix
+
+```{r}
+datos_netflix_sinna <- datos_netflix_sinna |> 
+  mutate(Fecha_agregadado = mdy(Fecha_agregadado))
+```
+
+```{r}
+datos_netflix_2 <- datos_netflix_sinna |> 
+  mutate(anyo_anadido = year(Fecha_agregadado),
+         mes_anadido = month(Fecha_agregadado))
+```
+
+Renombre de variables
+
+```{r}
+
+datos_netflix_2 <- datos_netflix_2 |> 
+ rename(Anyo_Agregado = anyo_anadido,
+        Mes_Agregado = mes_anadido,
+        Fecha_agregado = Fecha_agregadado)
+        
+
+```
+
+Reorden de columnas en el df "datos_netflix_2"
+
+```{r}
+datos_netflix_2 <- datos_netflix_2 |> 
+  select(Show_id, Tipo, Titulo, Categoria, Director, Duracion, Pais, Clasificacion, Fecha_agregado, Mes_Agregado, Anyo_Agregado)
+```
+
+Otros datos importantes
+
+Cantidad de peliculas y shows por país en orden descendente 
+```{r}
+datos_netflix_agrupados <- datos_netflix_2 |> 
+  group_by(Pais) |> 
+  count() |> 
+  arrange(desc(n))
+  
+```
+
+Top 10 de directores con mayor cantidad de peliculas dirigas
+
+```{r}
+datos_netflix_agrupadosdirector <- datos_netflix_2 |> 
+  filter(Tipo == "Movie", Director != "Sin Información") |> 
+   group_by(Director) |> 
+  count() |> 
+  arrange(desc(n))
+```
+
+Top 10 de directores con mayor cantidad de TV Shows dirigidos
+
+```{r}
+datos_netflix_agrupadosdirectorshow <- datos_netflix_2 |> 
+  filter(Tipo == "Tv Show", Director != "Sin Información") |> 
+   group_by(Director) |> 
+  count() |> 
+  arrange(desc(n))
+```
+
+```{r}
+datos_netflix2020 <- datos_netflix_2
+  filter(Anyo == 2020)
+```
+
+
+
+
+
+
+
+
