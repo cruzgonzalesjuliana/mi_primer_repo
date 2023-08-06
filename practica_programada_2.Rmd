@@ -1,0 +1,246 @@
+---
+title: "Práctica programada 2"
+author: "Juliana Cruz Gonzales"
+date: "2023-08-04"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(readr)
+library(readxl)
+library(tidyr)# doma de datos
+library(janitor) #limpieza de datos
+library(lubridate)
+library(hms)
+library(stringr)
+library(gt)
+library(datasets)
+library(readr)
+library(readxl) # para leer datos de excel
+library(writexl) # para guardar datos como excel
+library(utils)
+library(leaflet)
+
+```
+
+
+Este conjunto de datos contiene información acerca del índice de calidad del aire (AQI) de distintas ciudades
+alrededor del mundo. Las coordenadas geográficas de estas se encuentran como lat (latitud) y lng (longitud).
+
+
+a. Cree un archivo Rmarkdown para resolver esta práctica programada. En el chunk de setup cargue las
+librerías que considere necesarias para resolver la práctica. Los datos para trabajar puede cargarlos con
+la función read_csv de readr directamente de la siguiente dirección: “https://raw.githubusercontent.
+com/isa229/programacion_analisis_datos_ii/main/air_quality_index.csv”. (1pto)
+
+```{r}
+datos_aire <- read_delim("https://raw.githubusercontent.com/isa229/programacion_analisis_datos_ii/main/air_quality_index.csv",
+                         delim = ",",
+                         col_types = cols(Country = "c", City = "c", `AQI Value` = "d", `AQI Category` = "c", lat = "d", lng = "d"))
+```
+
+b. Cuántas categorías diferentes de AQI (AQI Category) hay en este conjunto de datos? Cuáles son?
+(2pts)
+
+```{r}
+Datos_aire_cat <- datos_aire |> 
+  distinct()
+```
+
+Respuesta: Hay 6 categorías diiferentes:_ 
+
+
+Moderate
+Good
+Unhealthy
+Very Unhealthy
+Unhealthy for Sensitive Groups
+Hazardous
+
+
+c. Cree una tabla que indique la cantidad de ciudades que hay en cada categoría de AQI (AQI Category).
+Adicionalmente, traduzca las categorías a español, por ejemplo “Good” sería “Bueno”. Presente esta
+tabla con el paquete gt, añadiendo títulos y subtítulos (10pts).
+
+Cambios generales 
+
+```{r}
+datos_aire_traducido <- datos_aire |> 
+  rename("Pais" = "Country",
+         "Ciudad" = "City",
+         "Puntaje de Calidad del Aire" = "AQI Value",
+         "Clasificación de Calidad del Aire" = "AQI Category")
+```
+
+
+Traducción de categorias al español:
+
+```{r}
+datos_aire_traducido <- datos_aire_traducido |> 
+  mutate(`Clasificación de Calidad del Aire` = ifelse(`Clasificación de Calidad del Aire` == "Moderate", "Moderado",
+                                 ifelse(`Clasificación de Calidad del Aire` == "Good", "Bueno",
+                                        ifelse(`Clasificación de Calidad del Aire` == "Unhealthy", "No Saludable",
+                                               ifelse(`Clasificación de Calidad del Aire` == "Very Unhealthy", "Muy No Saludable",
+                                                      ifelse(`Clasificación de Calidad del Aire` == "Unhealthy for Sensitive Groups", "Muy No Saludable Para Grupos Sensibles",
+                                                             ifelse(`Clasificación de Calidad del Aire` == "Hazardous", "Peligroso",
+                                                                    `Clasificación de Calidad del Aire`)))))))
+
+```
+
+
+Tabla Ciudades - AQI catergory 
+
+```{r}
+ciudades_por_categoria <- datos_aire_traducido |> 
+  group_by(`Clasificación de Calidad del Aire`) |> 
+  summarize(`Cantidad de Ciudades` = n()) |> 
+  arrange(desc(`Cantidad de Ciudades`))
+```
+
+```{r}
+ciudades_categoria_gt <- ciudades_por_categoria |> 
+  gt() |> 
+   tab_header(
+    title = "Cantidad de paises por clasificación de calidad del aire",
+    subtitle = "Se presentan las 6 clasificaciones en total"
+  )
+```
+
+
+d. Obtenga el promedio del AQI Value por país, y cree 2 tablas: Una que muestre los 10 países con los
+valores más bajos de AQI, y otra que muestre los 10 países con los valores más altos de AQI. Presente
+estas tablas con el paquete gt, añadiendo títulos y subtítulos (10pts)
+
+
+Obtención de Calidad del Aire
+```{r}
+promedio_calidad_aire <- datos_aire_traducido |> 
+  group_by(Pais) |> 
+  summarise(`Promedio de Calidad del Aire` = round(mean(`Puntaje de Calidad del Aire`), 2))
+
+```
+
+10 países con los valores más altos de Calidad de Aire
+
+```{r}
+promedio_calidad_aire_highest <- promedio_calidad_aire |> 
+   top_n(10, wt = `Promedio de Calidad del Aire`)
+
+```
+
+
+```{r}
+promedio_calidad_aire_gt_high <- promedio_calidad_aire_highest |> 
+  gt() %>%
+  tab_header(
+    title = "10 países con los valores más altos de AQI",
+    subtitle = ""
+  )
+```
+
+
+10 países con los valores más bajos de Aire
+
+```{r}
+promedio_calidad_aire_lowest <- promedio_calidad_aire |> 
+   top_n(-10, wt = `Promedio de Calidad del Aire`)
+```
+
+
+```{r}
+promedio_calidad_aire_gt_low<- promedio_calidad_aire_lowest|> 
+  gt() |> 
+   tab_header(
+    title = "10 países con los
+valores más bejos de Calidad del Aire",
+    subtitle = "Se presentan las 6 clasificaciones en total"
+  )
+```
+
+
+
+e. Para los 10 países con los valores promedios más altos de AQI, muestrelos en un mapa de leaflet usando
+addMarkers o un addCircles. En el popup debe colocar el valor promedio del AQI. (6pts)
+
+```{r}
+promedio_calidad_aire <- promedio_calidad_aire |> 
+  left_join(datos_aire_traducido |> 
+              select(Pais, lat, lng), by = "Pais")
+```
+
+
+```{r}
+# Crear el mapa con addMarkers y addCircles
+mapa1 <- leaflet(promedio_calidad_aire_highest) %>%
+  addTiles() %>%
+  addMarkers(lng = -69.968338, lat = 2.52111, popup = "163.0000") %>%
+  addMarkers(lng = 50.637772, lat = 25.930414, popup = "188.0000") %>%
+  addMarkers(lng = 47.481766, lat = 29.31166, popup = "161.0000") %>%
+  addMarkers(lng = -10.940835, lat = 21.00789, popup = "164.0000") %>%
+  addMarkers(lng = 55.923255, lat = 21.512583, popup = "155.0000")  %>%
+  addMarkers(lng = 69.345116, lat = 30.375321, popup = "184.2000") %>%
+  addMarkers(lng = 51.183884, lat = 25.354826, popup = "164.0000") %>%
+  addMarkers(lng = 127.766922, lat = 35.907757, popup = "421.0000") %>%
+  addMarkers(lng = 45.079162, lat = 23.885942, popup = "168.0000") %>%
+  addMarkers(lng = 53.847818, lat = 23.424076, popup = "163.6667")
+
+# Mostrar el mapa
+mapa1
+
+```
+
+
+```{r}
+mapa1 <- leaflet(promedio_calidad_aire_highest) %>%
+  addTiles() %>%
+ addCircles(lng = 69.345116, lat = 30.375321, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire")
+```
+
+
+```{r}
+mapa1 <- leaflet() |> 
+  addTiles() |>
+ addCircles(lng = -69.968338, lat = 2.52111, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire") %>%
+addCircles(lng = 50.637772, lat = 25.930414, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire") %>%
+  addCircles(lng = 47.481766, lat = 29.31166, radius = 100,  color = "orange", popup = "Promedio de Calidad del Aire") %>%
+  addCircles(lng = -10.940835, lat = 21.00789, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire") %>%
+  addCircles(lng = 55.923255, lat = 21.512583, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire") %>%
+  addCircles(lng = 69.345116, lat = 30.375321, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire") %>%
+  addCircles(lng = 51.183884, lat = 25.354826, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire") %>%
+  addCircles(lng = 127.766922, lat = 35.907757, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire") %>%
+  addCircles(lng = 45.079162, lat = 23.885942, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire") %>%
+  addCircles(lng = 53.847818, lat = 23.424076, radius = 100, color = "orange", popup = "Promedio de Calidad del Aire")
+```
+
+
+f. Escriba el código que exporte los datos en un excel, de tal manera que cada pestaña tenga solamente
+los datos de una categoría de AQI. (Es decir una pestaña para las ciudades cuya categoría es “Good”
+o “Buena”, otra para los que la categoría es “Moderate” y así para cada cateoría). (5pts)
+
+```{r}
+library(dplyr)
+
+datos_aire_traducido <- datos_aire_traducido |> 
+   mutate('lasificación de Calidad del Aire' )
+datos_sheets <- list(
+  "Moderado" = datos_aire_traducido %>%
+    filter(`Clasificación de Calidad del Aire` == "Moderado"),
+  "Bueno" = datos_aire_traducido %>%
+    filter(`Clasificación de Calidad del Aire` == "Bueno"),
+  "No Saludable" = datos_aire_traducido %>%
+    filter(`Clasificación de Calidad del Aire` == "No Saludable"),
+  "Muy No Saludable" = datos_aire_traducido %>%
+    filter(`Clasificación de Calidad del Aire` == "Muy No Saludable"),
+  "Muy No Saludable Para Grupos Sensibles" = datos_aire_traducido %>%
+    filter(`Clasificación de Calidad del Aire` == "Muy No Saludable Para Grupos Sensibles"),
+  "Peligroso" = datos_aire_traducido %>%
+    filter(`Clasificación de Calidad del Aire` == "Peligroso")
+) 
+
+write_xlsx(datos_sheets, path = "datos/datos_aire_csv.xlsx")
+```
+
