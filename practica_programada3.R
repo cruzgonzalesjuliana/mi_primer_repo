@@ -4,19 +4,20 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel( 
       width = 4,
-      textInput(inputId = "Nombre del evento", 
-                label = "Ingrese su nombre:"),
+      textInput(inputId = "nombre_evento", 
+                label = "Ingrese el nombre del evento:",
+                placeholder = "Ej: Cumpleaños n5"),
       br(),
-      selectInput(inputId = "selector_provincias", 
-                  label = "Tema del Evento", 
+      selectInput(inputId = "selector_eventos", 
+                  label = "Tema del Evento:", 
                   choices = c("Boda", "Fiesta de Cumpleaños", "Conferencia", "Otro"),
                   multiple = FALSE),
       br(),
       
-      numericInput(inputId = "edad", 
-                   label = "Elija su edad:", 
-                   value = 18, #indica el valor inicial a mostrar
-                   min = 25, #permite indicar el valor mínimo
+      numericInput(inputId = "numero_invitados", 
+                   label = "Número de invitados:", 
+                   value = 25,
+                   min = 25,
                    max = 120),
       br(),
       
@@ -27,20 +28,28 @@ ui <- fluidPage(
   
     ),
     mainPanel(
-      width = 7,
-      textOutput("materia_elegida"),
-      br()
-    ),
-
+      h1(strong("¡Vamos a planificar su día especial!"), align = "center", style="color:green"),
+      tags$hr(style = "border-color:green"),
+      h2(strong( "Detalles de su evento:"), width = 9), 
+      hr(),
+      textOutput("nombre_evento"),
+      hr(),
+      textOutput("selector_eventos"),
+      hr(),
+      textOutput("numero_invitados_ubicacion")
+      
     
-  ))
+  )))
   
     
   
   server <- function(input, output) {
     
-    output$materia_elegida <- renderText(paste0("Le damos la bienvenida, la materia que usted eligió matricular es: ",
-                                                input$selector_materias, "."))
+    output$nombre_evento <- renderText(paste0("Nombre del evento: ", input$nombre_evento))
+    output$selector_eventos <- renderText(paste0("Tema del evento: ", input$selector_eventos))
+    output$numero_invitados_ubicacion <- renderText(paste0("Número de invitados y ubicación: El evento ", input$tema_evento, " tendrá ", 
+                                                           input$numero_invitados, " invitados y será llevado a cabo en la provincia de ",
+                                                           input$selector_provincias, "."))
     
   } 
   
